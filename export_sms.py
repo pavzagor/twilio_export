@@ -19,6 +19,9 @@ client = Client(account_sid, auth_token)
 start_date = datetime(datetime.now().year, 6, 1)  # June 1st of current year
 end_date = datetime.now()  # Today
 
+# Set message limit
+MESSAGE_LIMIT = 100000
+
 # Prepare CSV file
 csv_filename = 'twilio_sms_export.csv'
 csv_headers = ['Date Sent', 'From', 'To', 'Body']
@@ -35,14 +38,14 @@ def fetch_messages(start_date, end_date, chunk_size=1000):
             break
         yield from page
 
-print("Starting export process...")
+print(f"Starting export process (limit: {MESSAGE_LIMIT} messages)...")
 
 with open(csv_filename, 'w', newline='', encoding='utf-8') as csvfile:
     writer = csv.DictWriter(csvfile, fieldnames=csv_headers)
     writer.writeheader()
 
     # Fetch and write messages with progress bar
-    with tqdm(desc="Exporting messages", unit="msg") as pbar:
+    with tqdm(total=MESSAGE_LIMIT, desc="Exporting messages", unit="msg") as pbar:
         for message in fetch_messages(start_date, end_date):
             writer.writerow({
                 'Date Sent': message.date_sent,
@@ -51,6 +54,9 @@ with open(csv_filename, 'w', newline='', encoding='utf-8') as csvfile:
                 'Body': message.body
             })
             pbar.update(1)
+
+            if pbar.n >= MESSAGE_LIMIT:
+                break
 
 print(f"Export complete. File saved as {csv_filename}")
 print(f"Total messages exported: {pbar.n}")
